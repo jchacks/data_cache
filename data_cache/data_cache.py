@@ -43,7 +43,7 @@ class Server(object):
     def start(self):
         self.tmpdir = tempfile.mkdtemp(prefix='plasma-')
         plasma_store_name = os.path.join(self.tmpdir, 'plasma.sock')
-        plasma_store_executable = os.path.join(pa.__path__[0], "plasma_store_server")
+        plasma_store_executable = os.path.join(pa.__path__[0], "plasma-store-server")
         command = [plasma_store_executable,
                    "-s", plasma_store_name,
                    "-m", str(self.plasma_store_memory)]
@@ -64,6 +64,7 @@ class Server(object):
         self.plasma_store_name = plasma_store_name
         self.proc = proc
         _kstore['plasma_store_name'] = self.plasma_store_name
+        _kstore['plasma_store_memory'] = self.plasma_store_memory
         print(self.plasma_store_name)
 
     def wait(self):
@@ -93,7 +94,10 @@ class Client(object):
     """
 
     def __init__(self, socket=None, queue='plasma'):
-        self.socket = _kstore['plasma_store_name'].decode() if socket is None else socket
+        if socket is None:
+            socket = _kstore['plasma_store_name']
+            socket = socket.decode()
+        self.socket = socket
         self.queue = Queue(queue)
         self.plasma_client = None
 
