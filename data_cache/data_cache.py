@@ -93,7 +93,7 @@ class Client(object):
     """
 
     def __init__(self, socket=None, queue='plasma'):
-        self.socket = str(_kstore['plasma_store_name']) if socket is None else socket
+        self.socket = _kstore['plasma_store_name'].decode() if socket is None else socket
         self.queue = Queue(queue)
         self.plasma_client = None
 
