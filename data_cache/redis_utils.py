@@ -3,11 +3,33 @@ from uuid import uuid4
 
 from contextlib import contextmanager
 
+_Redis = redis.Redis(host='localhost', port=6379, db=0)
+
+
+class KStore(object):
+    def __init__(self, prefix=None):
+        self.prefix = 'kstore:'
+        if prefix:
+            self.prefix += prefix + ':'
+        self.connection = _Redis
+
+    def __delitem__(self, key):
+        key = self.prefix + key
+        self.connection.delete(key)
+
+    def __getitem__(self, item):
+        item = self.prefix + item
+        return self.connection.get(item)
+
+    def __setitem__(self, key, value):
+        key = self.prefix + key
+        self.connection.set(key, value)
+
 
 class Queue(object):
     def __init__(self, name):
         self.name = name
-        self.connection = redis.Redis(host='localhost', port=6379, db=0)
+        self.connection = _Redis
 
         self._key = self.connection.hget('queues', self.name)
         if self._key is None:

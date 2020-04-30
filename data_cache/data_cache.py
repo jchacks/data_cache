@@ -7,7 +7,10 @@ import time
 import pyarrow as pa
 import pyarrow.plasma as plasma
 
-from data_cache.redis_utils import Queue
+from data_cache.redis_utils import Queue, KStore
+
+
+_kstore = KStore(prefix='plasma')
 
 
 def bytes_to_oid(bytestr):
@@ -18,7 +21,7 @@ class Server(object):
     def __init__(self, plasma_store_memory,
                  plasma_directory=None,
                  use_hugepages=False,
-                 external_store=None, ):
+                 external_store=None):
         """Start a plasma store process.
             Args:
                 plasma_store_memory (int): Capacity of the plasma store in bytes.
@@ -60,6 +63,7 @@ class Server(object):
 
         self.plasma_store_name = plasma_store_name
         self.proc = proc
+        _kstore['plasma_store_name'] = self.plasma_store_name
         print(self.plasma_store_name)
 
     def wait(self):
@@ -70,6 +74,7 @@ class Server(object):
             self.stop()
 
     def stop(self):
+        del _kstore['plasma_store_name']
         print("Stopping")
         if self.proc.poll() is None:
             self.proc.kill()
@@ -87,8 +92,8 @@ class Client(object):
     Wrapper around plasma client simplifying serialization
     """
 
-    def __init__(self, socket="/tmp/plasma", queue='plasma'):
-        self.plasma_client = None
+    def __init__(self, socket=None, queue='plasma'):
+        self.plasma_client = _kstore['plasma_store_name'] if socket is None else socket
         self.socket = socket
         self.queue = Queue(queue)
 
