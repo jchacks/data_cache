@@ -53,9 +53,9 @@ class Queue(object):
         return self.connection.llen(self._key)
 
     @contextmanager
-    def pipeline(self):
+    def pipeline(self, res: list):
         conn = self.connection
         self.connection = self.connection.pipeline()
         yield self
-        self.connection.execute()
+        res.extend(self.connection.execute())
         self.connection = conn

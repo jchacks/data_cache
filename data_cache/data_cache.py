@@ -103,6 +103,13 @@ class Client(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.disconnect()
 
+    def put_many(self, *args):
+        res = []
+        with self.queue.pipeline(res):
+            for arg in args:
+                self.put(arg)
+        return res
+
     def disconnect(self):
         self.plasma_client.disconnect()
 
@@ -127,5 +134,5 @@ class Client(object):
         print("Getting object at", uid)
         return self.get_object(uid)
 
-    def get_next_notification(self):
-        return self.plasma_client.get_next_notification()
+    def __repr__(self):
+        return "Client<q_len=%s, s_len=%s>" % (len(self.queue), len(self.plasma_client.list()))
