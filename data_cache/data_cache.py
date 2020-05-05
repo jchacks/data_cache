@@ -3,6 +3,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+import zmq
 
 import pyarrow as pa
 import pyarrow.plasma as plasma
@@ -41,6 +42,10 @@ class Server(object):
         self.tmpdir = None
 
     def start(self):
+        self.start_plasma()
+
+
+    def start_plasma(self):
         self.tmpdir = tempfile.mkdtemp(prefix='plasma-')
         plasma_store_name = os.path.join(self.tmpdir, 'plasma.sock')
         plasma_store_executable = os.path.join(pa.__path__[0], "plasma-store-server")
@@ -66,6 +71,7 @@ class Server(object):
         _kstore['plasma_store_name'] = self.plasma_store_name
         _kstore['plasma_store_memory'] = self.plasma_store_memory
         print(self.plasma_store_name)
+
 
     def wait(self):
         try:
@@ -128,7 +134,7 @@ class Client(object):
         object_id = self.plasma_client.put(data)
         return object_id.binary()
 
-    def put(self, data):
+    def put(self, data, timeout=None):
         uid = self.put_object(data)
         print("Put object at", uid)
         self.queue.put(uid)
