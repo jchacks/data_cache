@@ -51,7 +51,7 @@ class KStore(object):
 
     def __setitem__(self, key, value):
         key = self.prefix + key
-        self._redis.set(key, value)
+        self._redis.setnx(key, value)
 
 
 class Queue(object):

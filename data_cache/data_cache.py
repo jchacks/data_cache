@@ -11,6 +11,14 @@ from data_cache.redis_utils import Queue, KStore
 
 _kstore = KStore(prefix='plasma')
 
+context = pa.default_serialization_context()
+
+
+def register_on_context(cls):
+    context.register_type(cls, cls.__name__,
+                          custom_serializer=cls.to_dict,
+                          custom_deserializer=cls.from_dict)
+
 
 def bytes_to_oid(bytestr):
     return plasma.ObjectID(bytestr)
@@ -121,10 +129,10 @@ class Client(object):
         self.plasma_client = plasma.connect(self.socket)
 
     def get_object(self, id):
-        return pa.deserialize(self.plasma_client.get(bytes_to_oid(id)))
+        return pa.deserialize_components(self.plasma_client.get(bytes_to_oid(id)), context=context)
 
     def put_object(self, obj):
-        data = pa.serialize(obj).to_buffer()
+        data = pa.serialize(obj, context=context).to_components()
         object_id = self.plasma_client.put(data)
         return object_id.binary()
 
@@ -161,7 +169,7 @@ class Client(object):
 
     def __delitem__(self, key):
         uid = self.kstore[key]
-        self.plasma_client.delete(uid)
+        self.plasma_client.delete(bytes_to_oid(uid))
         del self.kstore[key]
 
     def __repr__(self):
