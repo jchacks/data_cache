@@ -1,7 +1,23 @@
 #!/usr/bin/env python3
 from data_cache import Server
+import argparse
+
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('memory', type=str)
+
 
 if __name__ == '__main__':
-    s = Server(10000000000)
+    args = parser.parse_args()
+    try:
+        memory = int(args.memory)
+    except ValueError:
+        memory = int(args.memory[:-1])
+        if args.memory[-1].lower() == 'k':
+            memory = memory * 1e3
+        elif args.memory[-1].lower() == 'm':
+            memory = memory * 1e6
+        elif args.memory[-1].lower() == 'g':
+            memory = memory * 1e9
+    s = Server(int(memory))
     s.start()
     s.wait()

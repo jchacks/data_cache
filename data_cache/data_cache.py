@@ -98,6 +98,7 @@ class Client(object):
             socket = socket.decode()
         self.socket = socket
         self.queue = Queue(queue, queue_maxsize)
+        self.kstore = KStore('generic')
         self.plasma_client = None
 
     def __enter__(self):
@@ -135,7 +136,28 @@ class Client(object):
     def get(self, block=True, timeout=None):
         uid = self.queue.get(block, timeout)
         print("Getting object at", uid)
-        return self.get_object(uid)
+        r = self.get_object(uid)
+        self.plasma_client.delete(self, uid)
+        return r
+
+    def __getitem__(self, item):
+        """
+        Get an object id from self.kstore and return the corresponding
+        object from the plasma store
+        :param item: key to retrive from keystore
+        :return: python object from plasma store
+        """
+        return self.get_object(self.kstore[item])
+
+    def __setitem__(self, key, value):
+        """
+        Set item on the plasma store and put the plasma store uid
+        at key in the redis store
+        :param key: key to place uid in Redis
+        :param value: python object to store
+        :return: None
+        """
+        self.kstore[key] = self.put_object(value)
 
     def __repr__(self):
         return "Client<q_len=%s, s_len=%s>" % (len(self.queue), len(self.plasma_client.list()))
