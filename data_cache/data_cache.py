@@ -159,5 +159,10 @@ class Client(object):
         """
         self.kstore[key] = self.put_object(value)
 
+    def __delitem__(self, key):
+        uid = self.kstore[key]
+        self.plasma_client.delete(uid)
+        del self.kstore[key]
+
     def __repr__(self):
         return "Client<q_len=%s, s_len=%s>" % (len(self.queue), len(self.plasma_client.list()))
