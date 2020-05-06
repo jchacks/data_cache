@@ -61,3 +61,17 @@ print(d)
 ```
 
 Client class can also be used in a with statement to automatically connect/disconnect.
+
+### Setting persistant data on the store
+```python
+import numpy as np 
+from data_cache import Client
+
+c = Client()
+c.connect()
+c['abc'] = np.ones((100000,)).astype('float32')
+
+# This will access the data and not remove it from plasma
+print(c['abc'])
+
+```
