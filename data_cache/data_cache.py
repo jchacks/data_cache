@@ -1,3 +1,4 @@
+import logging
 import os
 import shutil
 import subprocess
@@ -8,6 +9,10 @@ import pyarrow as pa
 import pyarrow.plasma as plasma
 
 from data_cache.redis_utils import Queue, KStore
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
+logger.setLevel(logging.WARNING)
 
 _kstore = KStore(prefix='plasma')
 
@@ -95,17 +100,42 @@ class Server(object):
         self.stop()
 
 
+# TODO write it so that multiple queues can be made and used.
+#   Something like:
+#   c['key'] = val # this should also work still
+#   q_train = c.make_queue('train')
+#   q_test = c.make_queue('test')
+#   q_train.put(data)
+
+class PlasmaQueue(object):
+    def __init__(self, client, queue='plasma', queue_maxsize=None):
+        self.client = client
+        self.queue = Queue(queue, queue_maxsize)
+
+    def put(self, data, block=True, timeout=None):
+        uid = self.client.put_object(data)
+        logger.debug("Put object at '%s'" % uid)
+        self.queue.put(uid)
+
+    def get(self, block=True, timeout=None):
+        uid = self.queue.get(block, timeout)
+        logger.debug("Getting object at '%s'" % uid)
+        r = self.client.get_object(uid)
+        self.client.delete_object(uid)
+        return r
+
+
 class Client(object):
     """
     Wrapper around plasma client simplifying serialization
     """
 
-    def __init__(self, socket=None, queue='plasma', queue_maxsize=None):
+    def __init__(self, socket=None):
         if socket is None:
             socket = _kstore['plasma_store_name']
             socket = socket.decode()
         self.socket = socket
-        self.queue = Queue(queue, queue_maxsize)
+        self.queues = {}
         self.kstore = KStore('generic')
         self.plasma_client = None
 
@@ -114,6 +144,11 @@ class Client(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.disconnect()
+
+    def make_queue(self, name, maxsize=None):
+        q = PlasmaQueue(self, name, maxsize)
+        self.queues['name'] = q
+        return q
 
     def put_many(self, *args):
         res = []
@@ -128,25 +163,16 @@ class Client(object):
     def connect(self):
         self.plasma_client = plasma.connect(self.socket)
 
-    def get_object(self, id):
-        return pa.deserialize_components(self.plasma_client.get(bytes_to_oid(id)), context=context)
+    def get_object(self, uid):
+        return pa.deserialize_components(self.plasma_client.get(bytes_to_oid(uid)), context=context)
 
     def put_object(self, obj):
         data = pa.serialize(obj, context=context).to_components()
         object_id = self.plasma_client.put(data)
         return object_id.binary()
 
-    def put(self, data, block=True, timeout=None):
-        uid = self.put_object(data)
-        print("Put object at", uid)
-        self.queue.put(uid)
-
-    def get(self, block=True, timeout=None):
-        uid = self.queue.get(block, timeout)
-        print("Getting object at", uid)
-        r = self.get_object(uid)
-        self.plasma_client.delete(self, uid)
-        return r
+    def delete_object(self, uid):
+        self.plasma_client.delete([bytes_to_oid(uid)])
 
     def __getitem__(self, item):
         """
@@ -165,11 +191,15 @@ class Client(object):
         :param value: python object to store
         :return: None
         """
+        uid = self.kstore[key]
+        if uid:
+            logger.warning("Found key '%s', deleting from plasma..." % key)
+            self.delete_object(uid)
         self.kstore[key] = self.put_object(value)
 
     def __delitem__(self, key):
         uid = self.kstore[key]
-        self.plasma_client.delete(bytes_to_oid(uid))
+        self.delete_object(uid)
         del self.kstore[key]
 
     def __repr__(self):

@@ -34,12 +34,12 @@ from data_cache import Client
 
 c = Client()
 c.connect()
-
+q = c.make_queue('plasma', None)
 # Put some dummy data into the queue
 import numpy as np 
 
 for i in range(10):
-    r = c.put(np.ones((100000,)).astype('float32') * i)
+    r = q.put(np.ones((100000,)).astype('float32') * i)
 
 c.disconnect()
 ```
@@ -50,10 +50,11 @@ from data_cache import Client
 
 c = Client()
 c.connect()
+q = c.make_queue('plasma', None) # Use the same name as above
 
 # Fetch data off the queue using c.get()
 import numpy as np 
-d = np.stack([c.get() for i in range(10)])
+d = np.stack([q.get() for i in range(10)])
 print(d) 
 
 # This will print the numpy array of 
