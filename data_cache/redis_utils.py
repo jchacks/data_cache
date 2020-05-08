@@ -3,7 +3,9 @@ from uuid import uuid4
 from time import time, sleep
 from contextlib import contextmanager
 from queue import Full, Empty
+import logging
 
+logger = logging.getLogger(__name__)
 _redis = redis.Redis(host='localhost', port=6379, db=0)
 
 
@@ -72,6 +74,16 @@ class Queue(object):
     def __repr__(self):
         return "Queue<%s>" % (self.name)
 
+    def drain(self):
+        uids = []
+        try:
+            while True:
+                uids.append(self.get(block=False))
+        except Empty:
+            logger.info("Drained queue, %s items." % len(uids))
+        finally:
+            return uids
+
     def put(self, *id, block=True, timeout=None):
         if self.maxsize:
             if not block:
@@ -122,8 +134,9 @@ class Queue(object):
         return r
 
     def delete(self):
-        print("Deleting Queue")
-        self._redis.delete(self._key)
+        with self.lock:
+            logger.debug("Deleting Queue")
+            self._redis.delete(self._key)
 
     def __len__(self):
         return self._redis.llen(self._key)

@@ -100,13 +100,6 @@ class Server(object):
         self.stop()
 
 
-# TODO write it so that multiple queues can be made and used.
-#   Something like:
-#   c['key'] = val # this should also work still
-#   q_train = c.make_queue('train')
-#   q_test = c.make_queue('test')
-#   q_train.put(data)
-
 class PlasmaQueue(object):
     def __init__(self, client, queue='plasma', queue_maxsize=None):
         self.client = client
@@ -123,6 +116,13 @@ class PlasmaQueue(object):
         r = self.client.get_object(uid)
         self.client.delete_object(uid)
         return r
+
+    def delete(self):
+        with self.queue.lock:
+            uids = self.queue.drain()
+            if uids:
+                self.client.delete_objects(*uids)
+            self.queue.delete()
 
 
 class Client(object):
@@ -171,8 +171,8 @@ class Client(object):
         object_id = self.plasma_client.put(data)
         return object_id.binary()
 
-    def delete_object(self, uid):
-        self.plasma_client.delete([bytes_to_oid(uid)])
+    def delete_objects(self, *uids):
+        self.plasma_client.delete([bytes_to_oid(uid) for uid in uids])
 
     def __getitem__(self, item):
         """
