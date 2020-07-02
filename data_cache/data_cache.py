@@ -114,7 +114,7 @@ class PlasmaQueue(object):
         uid = self.queue.get(block, timeout)
         logger.debug("Getting object at '%s'" % uid)
         r = self.client.get_object(uid)
-        self.client.delete_object(uid)
+        self.client.delete_objects(uid)
         return r
 
     def delete(self):
@@ -122,7 +122,7 @@ class PlasmaQueue(object):
             uids = self.queue.drain()
             if uids:
                 self.client.delete_objects(*uids)
-            self.queue.delete()
+        self.queue.delete()
 
 
 class Client(object):
@@ -191,15 +191,18 @@ class Client(object):
         :param value: python object to store
         :return: None
         """
-        uid = self.kstore[key]
-        if uid:
+        try:
+            uid = self.kstore[key]
             logger.warning("Found key '%s', deleting from plasma..." % key)
-            self.delete_object(uid)
-        self.kstore[key] = self.put_object(value)
+            self.delete_objects(uid)
+        except KeyError:
+            pass
+        finally:
+            self.kstore[key] = self.put_object(value)
 
     def __delitem__(self, key):
         uid = self.kstore[key]
-        self.delete_object(uid)
+        self.delete_objects(uid)
         del self.kstore[key]
 
     def __repr__(self):
