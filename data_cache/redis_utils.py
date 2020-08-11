@@ -53,7 +53,6 @@ class KStore(object):
     def __getitem__(self, item):
         item = self.prefix + item
         redis_type = self._redis.type(item)
-        print(item, redis_type)
         if redis_type == RTypes.HASH.value:
             r = self._redis.hgetall(item)
         else:
@@ -112,7 +111,7 @@ class Queue(object):
         finally:
             return uids
 
-    def put(self, id, block=True, timeout=None):
+    def put(self, uid, block=True, timeout=None):
         if self.maxsize:
             if not block:
                 if self.length >= self.maxsize:
@@ -121,7 +120,7 @@ class Queue(object):
                 while True:
                     with self.lock:
                         if self.length <= self.maxsize:
-                            self._redis.rpush(self._key, id)
+                            self._redis.rpush(self._key, [uid])
                             return
                     sleep(1)
             elif timeout < 0:
@@ -134,7 +133,7 @@ class Queue(object):
                         raise Full
                     sleep(remaining)
 
-        self._redis.rpush(self._key, id)
+        self._redis.rpush(self._key, [uid])
 
     def get(self, block=True, timeout=None):
         if not block:
