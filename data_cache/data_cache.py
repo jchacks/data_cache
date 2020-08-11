@@ -100,18 +100,18 @@ class Server(object):
         self.stop()
 
 
-class PlasmaQueue(object):
-    def __init__(self, client, queue='plasma', queue_maxsize=None):
+class PlasmaQueue(Queue):
+    def __init__(self, client, queue, queue_maxsize=None):
+        super(PlasmaQueue, self).__init__(queue, queue_maxsize)
         self.client = client
-        self.queue = Queue(queue, queue_maxsize)
 
     def put(self, data, block=True, timeout=None):
         uid = self.client.put_object(data)
         logger.debug("Put object at '%s'" % uid)
-        self.queue.put(uid)
+        super(PlasmaQueue, self).put(uid)
 
     def get(self, block=True, timeout=None):
-        uid = self.queue.get(block, timeout)
+        uid = super(PlasmaQueue, self).get(block, timeout)
         logger.debug("Getting object at '%s'" % uid)
         r = self.client.get_object(uid)
         self.client.delete_objects(uid)
@@ -119,10 +119,10 @@ class PlasmaQueue(object):
 
     def delete(self):
         with self.queue.lock:
-            uids = self.queue.drain()
+            uids = self.drain()
             if uids:
                 self.client.delete_objects(*uids)
-        self.queue.delete()
+        super(PlasmaQueue, self).delete()
 
 
 class Client(object):
@@ -130,13 +130,12 @@ class Client(object):
     Wrapper around plasma client simplifying serialization
     """
 
-    def __init__(self, socket=None):
+    def __init__(self, namespace, socket=None):
         if socket is None:
-            socket = _kstore['plasma_store_name']
-            socket = socket.decode()
+            socket = _kstore['plasma_store_name'].decode()
         self.socket = socket
         self.queues = {}
-        self.kstore = KStore('generic')
+        self.kstore = KStore(namespace)
         self.plasma_client = None
 
     def __enter__(self):
@@ -146,16 +145,7 @@ class Client(object):
         self.disconnect()
 
     def make_queue(self, name, maxsize=None):
-        q = PlasmaQueue(self, name, maxsize)
-        self.queues['name'] = q
-        return q
-
-    def put_many(self, *args):
-        res = []
-        with self.queue.pipeline(res):
-            for arg in args:
-                self.put(arg)
-        return res
+        return PlasmaQueue(self, name, maxsize)
 
     def disconnect(self):
         self.plasma_client.disconnect()
@@ -206,4 +196,4 @@ class Client(object):
         del self.kstore[key]
 
     def __repr__(self):
-        return "Client<q_len=%s, s_len=%s>" % (len(self.queue), len(self.plasma_client.list()))
+        return "Client<%s>" % (id(self),)
