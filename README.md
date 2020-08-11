@@ -32,7 +32,8 @@ s.wait()
 ```python
 from data_cache import Client
 
-c = Client()
+# Ensure the `namespace` is the same everywhere the data is needed to be accessed
+c = Client(namespace='generic') 
 c.connect()
 q = c.make_queue('plasma', None)
 # Put some dummy data into the queue
@@ -48,7 +49,7 @@ c.disconnect()
 ```python
 from data_cache import Client
 
-c = Client()
+c = Client('generic')
 c.connect()
 q = c.make_queue('plasma', None) # Use the same name as above
 
@@ -68,7 +69,7 @@ Client class can also be used in a with statement to automatically connect/disco
 import numpy as np 
 from data_cache import Client
 
-c = Client()
+c = Client('generic')
 c.connect()
 c['abc'] = np.ones((100000,)).astype('float32')
 
