@@ -1,9 +1,14 @@
 # Data Cache
 
-Simple in memory data cache designed for ML applications.
-Built using Redis and Apache Arrow's Plasma in-memory store
+Simple in memory data cache designed for local non distributed ML applications.
+Built using Redis and Apache Arrow's Plasma in-memory store.
 
-## Prerequisites
+## Installation
+
+Install using pip: 
+`pip install git+https://github.com/jchacks/data_cache.git`
+
+### Prerequisites
 
 There are a few python packages that are required.
 * Pyarrow
@@ -25,7 +30,7 @@ s.wait()
 # The location of the plasma store will be printed
 # e.g. '/tmp/plasma-qd3yeugu/plasma.sock'
 # This location is also added to the Redis store 
-# so clients can automatically find it
+# so clients can automatically find it.
 ```
 
 ### Data Producing Client
