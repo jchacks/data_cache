@@ -83,7 +83,7 @@ class KStore(object):
             self._redis.delete(key)
 
 
-class Queue(object):
+class RedisQueue(object):
     def __init__(self, name, maxsize=None):
         self.name = name
         self._redis = _redis
@@ -92,6 +92,7 @@ class Queue(object):
         if self._key is None:
             self._key = 'queue:' + str(uuid4())
             self._redis.hset('queues', self.name, self._key)
+            logger.info("Could not find queue for '%s', made a new one at '%s'" % (self.name, self._key))
         self.lock = Lock(to_lock=self._key)
 
     @property

@@ -85,3 +85,4 @@ print(c['abc'])
 
 ## TODO
 * Setup a nice API for accessing namespaces and queues.
+* Flush all on server reboot.

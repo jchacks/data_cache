@@ -11,6 +11,8 @@ d.connect()
 c['a'] = 2
 d['a'] = 5
 
+assert c['a'] != d['a']
+
 print(c['a'])  # prints 2
 print(d['a'])  # prints 5
 
