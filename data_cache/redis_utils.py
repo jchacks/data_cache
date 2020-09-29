@@ -120,7 +120,7 @@ class Queue(object):
                 while True:
                     with self.lock:
                         if self.length <= self.maxsize:
-                            self._redis.rpush(self._key, [uid])
+                            self._redis.rpush(self._key, uid)
                             return
                     sleep(1)
             elif timeout < 0:
@@ -133,7 +133,7 @@ class Queue(object):
                         raise Full
                     sleep(remaining)
 
-        self._redis.rpush(self._key, [uid])
+        self._redis.rpush(self._key, uid)
 
     def get(self, block=True, timeout=None):
         if not block:

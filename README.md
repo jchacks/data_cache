@@ -82,3 +82,6 @@ c['abc'] = np.ones((100000,)).astype('float32')
 print(c['abc'])
 
 ```
+
+## TODO
+* Setup a nice API for accessing namespaces and queues.

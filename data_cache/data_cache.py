@@ -118,7 +118,7 @@ class PlasmaQueue(Queue):
         return r
 
     def delete(self):
-        with self.queue.lock:
+        with self.lock:
             uids = self.drain()
             if uids:
                 self.client.delete_objects(*uids)
