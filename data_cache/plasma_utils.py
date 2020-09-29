@@ -3,10 +3,13 @@ import shutil
 import subprocess
 import tempfile
 import time
-
+import logging
 import pyarrow as pa
 import pyarrow.plasma as plasma
 
+from data_cache.redis_utils import _redis
+
+logger = logging.getLogger(__name__)
 _context = pa.default_serialization_context()
 
 
@@ -45,7 +48,6 @@ class PlasmaServer(object):
         self.plasma_store_name = None
         self.proc = None
         self.tmpdir = None
-        self.kstore = kstore
 
     def start(self):
         self.tmpdir = tempfile.mkdtemp(prefix='plasma-')
@@ -70,8 +72,10 @@ class PlasmaServer(object):
 
         self.plasma_store_name = plasma_store_name
         self.proc = proc
-        self.kstore['plasma_store_name'] = self.plasma_store_name
-        self.kstore['plasma_store_memory'] = self.plasma_store_memory
+        _redis.hmset('plasma', {
+            'plasma_store_name': self.plasma_store_name,
+            'plasma_store_memory': self.plasma_store_memory,
+        })
         print(self.plasma_store_name)
 
     def wait(self):
@@ -82,8 +86,8 @@ class PlasmaServer(object):
             self.stop()
 
     def stop(self):
-        del self.kstore['plasma_store_name']
-        print("Stopping")
+        _redis.delete('plasma')
+        logger.info("Stopping")
         if self.proc.poll() is None:
             self.proc.kill()
         shutil.rmtree(self.tmpdir)
@@ -98,6 +102,11 @@ class PlasmaServer(object):
 class PlasmaClient(object):
     def __init__(self):
         self._client = None
+
+    @staticmethod
+    def get_details():
+        # Todo move this to redis utils?
+        return _redis.hgetall('plasma')
 
     def connect(self, socket):
         self._client = plasma.connect(socket)

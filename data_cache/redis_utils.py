@@ -39,9 +39,9 @@ class Lock(object):
         self.release()
 
 
-class KStore(object):
+class RedisDict(object):
     def __init__(self, prefix=None):
-        self.prefix = 'kstore:'
+        self.prefix = 'dc:'
         if prefix:
             self.prefix += prefix + ':'
         self._redis = _redis

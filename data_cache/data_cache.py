@@ -1,12 +1,13 @@
 import logging
+
 from data_cache.plasma_utils import PlasmaClient
-from data_cache.redis_utils import RedisQueue, KStore
+from data_cache.redis_utils import RedisQueue, RedisDict
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 logger.setLevel(logging.WARNING)
 
-_kstore = KStore(prefix='plasma')
+_kstore = RedisDict(prefix='plasma')
 
 
 class Queue(RedisQueue):
@@ -34,22 +35,11 @@ class Queue(RedisQueue):
         super(Queue, self).delete()
 
 
-class Client(object):
-    """
-    Wrapper around plasma client and redis simplifying serialization
-    """
-
-    def __init__(self, namespace, socket=None):
-        if socket is None:
-            socket = _kstore['plasma_store_name'].decode()
-        self.socket = socket
-        self.queues = {}
-        self.kstore = KStore(namespace)
-        self.plasma_client = PlasmaClient()
-        self.plasma_client.connect(socket)
-
-    def make_queue(self, name, maxsize=None):
-        return Queue(self.plasma_client, name, maxsize)
+class KStore(object):
+    def __init__(self, plasma_client, namespace):
+        self._namespace = namespace
+        self.plasma_client = plasma_client
+        self._dict = RedisDict(prefix=namespace)
 
     def __getitem__(self, item):
         """
@@ -58,7 +48,7 @@ class Client(object):
         :param item: key to retrive from keystore
         :return: python object from plasma store
         """
-        return self.plasma_client.get_object(self.kstore[item])
+        return self.plasma_client.get_object(self._dict[item])
 
     def __setitem__(self, key, value):
         """
@@ -69,18 +59,47 @@ class Client(object):
         :return: None
         """
         try:
-            uid = self.kstore[key]
+            uid = self._dict[key]
             logger.warning("Found key '%s', deleting from plasma..." % key)
             self.plasma_client.delete_objects(uid)
         except KeyError:
             pass
         finally:
-            self.kstore[key] = self.plasma_client.put_object(value)
+            self._dict[key] = self.plasma_client.put_object(value)
 
     def __delitem__(self, key):
-        uid = self.kstore[key]
+        uid = self._dict[key]
         self.plasma_client.delete_objects(uid)
-        del self.kstore[key]
+        del self._dict[key]
+
+
+class Client(object):
+    """
+    Wrapper around plasma client and redis simplifying serialization
+    """
+
+    def __init__(self, socket=None):
+        if socket is None:
+            details = PlasmaClient.get_details()
+            socket = details['plasma_store_name'].decode()
+
+        self.socket = socket
+        self.queues = {}
+        self.stores = {}
+        self.plasma_client = PlasmaClient()
+        self.plasma_client.connect(socket)
+
+    def make_queue(self, name, maxsize=None):
+        return Queue(self.plasma_client, name, maxsize)
+
+    def get_or_create_store(self, item):
+        if item in self.stores.keys():
+            return self.stores[item]
+        else:
+            logger.info("Could not find store '%s'; creating..." % item)
+            kstore = KStore(self.plasma_client, item)
+            self.stores[item] = kstore
+            return kstore
 
     def __repr__(self):
         return "Client<%s, %s>" % (id(self), self.plasma_client)

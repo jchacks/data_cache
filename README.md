@@ -21,9 +21,9 @@ Along with a running Redis server for the message queue.
 
 ### Server
 ```python
-from data_cache import Server
+from data_cache import PlasmaServer
 
-s = Server(100000000) # 100MB
+s = PlasmaServer(100000000) # 100MB
 s.start()
 s.wait()
 
@@ -38,8 +38,7 @@ s.wait()
 from data_cache import Client
 
 # Ensure the `namespace` is the same everywhere the data is needed to be accessed
-c = Client(namespace='generic') 
-c.connect()
+c = Client() 
 q = c.make_queue('plasma', None)
 # Put some dummy data into the queue
 import numpy as np 
@@ -47,15 +46,13 @@ import numpy as np
 for i in range(10):
     r = q.put(np.ones((100000,)).astype('float32') * i)
 
-c.disconnect()
 ```
 
 ### Data Consuming Client
 ```python
 from data_cache import Client
 
-c = Client('generic')
-c.connect()
+c = Client()
 q = c.make_queue('plasma', None) # Use the same name as above
 
 # Fetch data off the queue using c.get()
@@ -67,22 +64,16 @@ print(d)
 # concatenated data in order 1->10
 ```
 
-Client class can also be used in a with statement to automatically connect/disconnect.
-
 ### Setting persistant data on the store
 ```python
 import numpy as np 
 from data_cache import Client
 
-c = Client('generic')
-c.connect()
-c['abc'] = np.ones((100000,)).astype('float32')
+c = Client()
+generic = c.get_or_create_store('generic')
+generic['abc'] = np.ones((100000,)).astype('float32')
 
 # This will access the data and not remove it from plasma
-print(c['abc'])
+print(generic['abc'])
 
 ```
-
-## TODO
-* Setup a nice API for accessing namespaces and queues.
-* Flush all on server reboot.

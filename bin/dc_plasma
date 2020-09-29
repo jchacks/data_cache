@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 from data_cache import PlasmaServer
-from data_cache.data_cache import _kstore
 import argparse
+import logging
+
+logger = logging.basicConfig(level='DEBUG')
 
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('memory', type=str)
@@ -19,6 +21,6 @@ if __name__ == '__main__':
             memory = memory * 1e6
         elif args.memory[-1].lower() == 'g':
             memory = memory * 1e9
-    s = PlasmaServer(int(memory), kstore=_kstore)
+    s = PlasmaServer(int(memory))
     s.start()
     s.wait()
