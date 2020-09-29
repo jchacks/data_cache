@@ -1,5 +1,5 @@
 import numpy as np
-from data_cache.data_cache import Client
+from data_cache import Client
 
 c = Client()
 

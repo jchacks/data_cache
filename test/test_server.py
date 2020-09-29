@@ -1,5 +1,5 @@
-from data_cache.data_cache import Server
+from data_cache import PlasmaServer
 
-s = Server(10000000000)
+s = PlasmaServer(10000000000)
 s.start()
 s.wait()
