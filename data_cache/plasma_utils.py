@@ -1,9 +1,10 @@
+import logging
 import os
 import shutil
 import subprocess
 import tempfile
 import time
-import logging
+
 import pyarrow as pa
 import pyarrow.plasma as plasma
 
@@ -106,7 +107,7 @@ class PlasmaClient(object):
     @staticmethod
     def get_details():
         # Todo move this to redis utils?
-        return _redis.hgetall('plasma')
+        return {k.decode(): v for k, v in _redis.hgetall('plasma').items()}
 
     def connect(self, socket):
         self._client = plasma.connect(socket)
