@@ -1,3 +1,6 @@
+import logging
+logging.basicConfig()
+
 import numpy as np
 from data_cache import Client
 
@@ -5,7 +8,7 @@ c = Client()
 
 queue = c.make_queue('test')
 for i in range(10):
-    r = queue.put(np.ones((100000,)).astype('float32') * i)
+    queue.put(np.ones((100000,)).astype('float32') * i)
 
 
 # In a separate python process

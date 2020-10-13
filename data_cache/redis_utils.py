@@ -85,8 +85,8 @@ class RedisDict(object):
 
 class RedisQueue(object):
     def __init__(self, name, maxsize=None):
-        self.name = name
         self._redis = _redis
+        self.name = name
         self.maxsize = maxsize
         self._key = self._redis.hget('queues', self.name)
         if self._key is None:
@@ -100,19 +100,19 @@ class RedisQueue(object):
         return self._redis.llen(self._key)
 
     def __repr__(self):
-        return "Queue<%s>" % (self.name)
+        return "%s<%s, %s>" % (self.__class__.__name__, self.name, self.length)
 
     def drain(self):
-        uids = []
+        items = []
         try:
             while True:
-                uids.append(self.get(block=False))
+                items.append(self.get(block=False))
         except Empty:
-            logger.info("Drained queue, %s items." % len(uids))
+            logger.info("Drained queue, %s items." % len(items))
         finally:
-            return uids
+            return items
 
-    def put(self, uid, block=True, timeout=None):
+    def put(self, item, block=True, timeout=None):
         if self.maxsize:
             if not block:
                 if self.length >= self.maxsize:
@@ -121,7 +121,7 @@ class RedisQueue(object):
                 while True:
                     with self.lock:
                         if self.length <= self.maxsize:
-                            self._redis.rpush(self._key, uid)
+                            self._redis.rpush(self._key, item)
                             return
                     sleep(1)
             elif timeout < 0:
@@ -134,7 +134,7 @@ class RedisQueue(object):
                         raise Full
                     sleep(remaining)
 
-        self._redis.rpush(self._key, uid)
+        self._redis.rpush(self._key, item)
 
     def get(self, block=True, timeout=None):
         if not block:

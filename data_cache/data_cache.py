@@ -10,29 +10,32 @@ logger.setLevel(logging.WARNING)
 _kstore = RedisDict(prefix='plasma')
 
 
-class Queue(RedisQueue):
+class Queue(object):
     def __init__(self, client: PlasmaClient, name, maxsize=None):
-        super(Queue, self).__init__(name, maxsize)
+        self.queue = RedisQueue(name, maxsize)
         self.client = client
 
     def put(self, data, block=True, timeout=None):
         uid = self.client.put_object(data)
-        logger.debug("Put object at '%s'" % uid)
-        super(Queue, self).put(uid)
+        self.queue.put(uid, block, timeout)
+        logger.debug("Put %s at %s" % (type(data), uid))
 
     def get(self, block=True, timeout=None):
-        uid = super(Queue, self).get(block, timeout)
-        logger.debug("Getting object at '%s'" % uid)
+        uid = self.queue.get(block, timeout)
+        logger.debug("Getting object at %s" % uid)
         r = self.client.get_object(uid)
         self.client.delete_objects(uid)
         return r
 
     def delete(self):
-        with self.lock:
-            uids = self.drain()
+        with self.queue.lock:
+            uids = self.queue.drain()
             if uids:
                 self.client.delete_objects(*uids)
-        super(Queue, self).delete()
+        self.queue.delete()
+
+    def __repr__(self):
+        return "%s<%s>" % (self.__class__.__name__, self.queue.length)
 
 
 class KStore(object):

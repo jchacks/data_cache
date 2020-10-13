@@ -3,7 +3,8 @@ from data_cache import PlasmaServer
 import argparse
 import logging
 
-logger = logging.basicConfig(level='DEBUG')
+logger = logging.getLogger()
+logger.setLevel('DEBUG')
 
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('memory', type=str)
